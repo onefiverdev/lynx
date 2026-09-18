@@ -25,7 +25,7 @@ type LynxData = {
 	server: Runtime.ServeHandle?,
 }
 
-export type Lynx = setmetatable<LynxData, typeof(Lynx)>
+export type Lynx = typeof(setmetatable({} :: LynxData, Lynx))
 
 export type LynxConfig = {
 	port: number?,
@@ -55,12 +55,14 @@ local function mergePath(base: string, sub: string): string
 end
 
 function Lynx.new(): Lynx
-	local self = {}
-	self.router = Router.new()
-	self.routes = {}
-	self.notFoundHandler = defaultNotFound
-	self.errorHandler = defaultErrorHandler
-	self.server = nil :: Runtime.ServeHandle?
+	local self: LynxData = {
+		router = Router.new(),
+		routes = {},
+		notFoundHandler = defaultNotFound,
+		errorHandler = defaultErrorHandler,
+		server = nil :: Runtime.ServeHandle?
+	}
+
 	return setmetatable(self, Lynx)
 end
 
@@ -187,7 +189,7 @@ function Lynx.dispatch(self: Lynx, req: Runtime.ServeRequest): Runtime.ServeResp
 		end
 	end
 
-	local function dispatch(i): Runtime.ServeResponse?
+	local function dispatch(i: number): Runtime.ServeResponse?
 		if i > #match then
 			return self.notFoundHandler(context)
 		end
@@ -197,7 +199,7 @@ function Lynx.dispatch(self: Lynx, req: Runtime.ServeRequest): Runtime.ServeResp
 		local handler = match[i].handler
 
 		return (handler :: Middleware)(context, function()
-			dispatch(i + 1)
+			return dispatch(i + 1)
 		end)
 	end
 
@@ -205,6 +207,8 @@ function Lynx.dispatch(self: Lynx, req: Runtime.ServeRequest): Runtime.ServeResp
 
 	if not success then
 		return self.errorHandler(context, tostring(result))
+	elseif result then
+		return result
 	elseif context.finalized then
 		return context.res
 	else
