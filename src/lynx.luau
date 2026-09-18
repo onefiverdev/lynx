@@ -64,6 +64,12 @@ function Lynx.new(): Lynx
 	return setmetatable(self, Lynx)
 end
 
+setmetatable(Lynx, {
+	__call = function()
+		return Lynx.new()
+	end
+})
+
 function Lynx.route(self: Lynx, path: string, app: Lynx)
 	for _, route in app.routes do
 		self:addRoute(route.method, mergePath(path, route.path), route.handler)
